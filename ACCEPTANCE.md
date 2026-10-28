@@ -39,6 +39,20 @@ ffmpeg -v error -i input.mkv -map 0:v -c:a copy missing.mkv
 
 前 3 条应成功：`auto-two.mkv` 的音频编码流哈希与 `other.mkv` 相同；`negative.mkv` 和 `optional.mkv` 的音频编码流哈希均与 `input.mkv` 的第二条音轨相同。第四条在输入没有视频时应失败，检查 stderr，记录退出码且确认未创建输出；本机 Linux n9.0.2 返回 234，不将其推广到其他平台。再用不存在的输入文件索引加 `?`，应失败，不能将可选流误当成可选输入文件。
 
+## ffprobe JSON 字段与错误
+
+在隔离目录生成双音轨文件（要求构建支持 lavfi、PCM 与 Matroska）：
+
+```sh
+ffmpeg -v error -f lavfi -i 'sine=frequency=440:sample_rate=8000:duration=0.25' -f lavfi -i 'sine=frequency=660:sample_rate=16000:duration=0.25' -map 0:a -map 1:a -c:a pcm_s16le -metadata 'title=Probe Sample' -metadata:s:a:0 language=eng -metadata:s:a:1 language=jpn -disposition:a:0 default -disposition:a:1 0 probe.mkv
+ffprobe -v error -show_entries 'stream=index,codec_name,sample_rate,channels:stream_tags=language:stream_disposition=default' -of json probe.mkv
+ffprobe -v error -select_streams a:1 -show_entries 'stream=index,codec_name,sample_rate,channels:stream_tags=language:stream_disposition=default' -of json probe.mkv
+ffprobe -v error -show_entries 'format=format_name,duration:format_tags=title' -of json probe.mkv
+ffprobe -v error -show_error -of json missing.mkv
+```
+
+解析 JSON 并按 `PROBE-AND-PLAY.md` 检查字段值和 JSON 类型；第二条查询只返回索引 1。分别检查 `v` 和 `a:5` 为成功的空流结果，`a:bogus` 为错误；`stream=` 不显示字段，未知字段不会凭空出现。最后一条命令应返回非零并提供错误 section 与诊断；再用 `-v quiet` 核对 JSON 保留而 stderr 为空。自动化样本见标准库验收仓库的 `FFmpegSamples`；只有指定候选 ffmpeg 与 ffprobe 并运行后才能作为重建验收。
+
 ## 复杂音频过滤图
 
 以下命令在空目录中执行，要求构建支持列出的滤镜、WAV 和 16 位 PCM：
