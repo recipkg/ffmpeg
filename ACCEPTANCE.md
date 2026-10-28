@@ -24,3 +24,16 @@ ffprobe -v error -show_entries stream=index,codec_name,channels -of json selecte
 ```
 
 本机 n9.0.2 的输入为单声道默认流和双声道非默认流；自动输出为单声道，显式 `-map 0:a:1` 输出为双声道。再生成仅把默认标记换到第二流的独立文件并自动映射，输出应为双声道；以 `-f hash -hash sha256` 分别计算输入选择流与复制输出编码数据的哈希并比较。该样例所需的 lavfi、Matroska 和 PCM 必须可用，结果不推广到未测试的格式、选项和构建。
+
+## 多输入、负向和可选映射
+
+接续上面的 `input.mkv`：再生成一条双声道 PCM 流的 `other.mkv`。使用 `ffmpeg -v error -f lavfi -i 'sine=frequency=660:duration=1' -c:a pcm_s16le -ac 2 other.mkv`。
+
+```sh
+ffmpeg -v error -i input.mkv -i other.mkv -c:a copy auto-two.mkv
+ffmpeg -v error -i input.mkv -map 0:a -map -0:a:0 -c:a copy negative.mkv
+ffmpeg -v error -i input.mkv -map '0:v?' -map 0:a:1 -c:a copy optional.mkv
+ffmpeg -v error -i input.mkv -map 0:v -c:a copy missing.mkv
+```
+
+前 3 条应成功：`auto-two.mkv` 的音频编码流哈希与 `other.mkv` 相同；`negative.mkv` 和 `optional.mkv` 的音频编码流哈希均与 `input.mkv` 的第二条音轨相同。第四条在输入没有视频时应失败，检查 stderr，记录退出码且确认未创建输出；本机 Linux n9.0.2 返回 234，不将其推广到其他平台。再用不存在的输入文件索引加 `?`，应失败，不能将可选流误当成可选输入文件。
