@@ -37,3 +37,32 @@ ffmpeg -v error -i input.mkv -map 0:v -c:a copy missing.mkv
 ```
 
 前 3 条应成功：`auto-two.mkv` 的音频编码流哈希与 `other.mkv` 相同；`negative.mkv` 和 `optional.mkv` 的音频编码流哈希均与 `input.mkv` 的第二条音轨相同。第四条在输入没有视频时应失败，检查 stderr，记录退出码且确认未创建输出；本机 Linux n9.0.2 返回 234，不将其推广到其他平台。再用不存在的输入文件索引加 `?`，应失败，不能将可选流误当成可选输入文件。
+
+## 复杂音频过滤图
+
+以下命令在空目录中执行，要求构建支持列出的滤镜、WAV 和 16 位 PCM：
+
+```sh
+ffmpeg -v error -f lavfi -i 'sine=frequency=440:sample_rate=8000:duration=0.25' -c:a pcm_s16le a.wav
+ffmpeg -v error -f lavfi -i 'sine=frequency=880:sample_rate=8000:duration=0.125' -c:a pcm_s16le b.wav
+ffmpeg -v error -i a.wav -i b.wav -filter_complex '[0:a]volume=0.5[a0];[1:a]volume=0.5[a1];[a0][a1]amix=inputs=2:duration=shortest:normalize=0[mix]' -map '[mix]' -c:a pcm_s16le mix.wav
+ffmpeg -v error -i a.wav -filter_complex '[0:a]asplit=2[a][b];[a]volume=0[sil];[b]volume=1[orig]' -map '[sil]' -c:a pcm_s16le silent.wav -map '[orig]' -c:a pcm_s16le original.wav
+```
+
+以独立 WAV 读取器检查全部输出为单声道、8000 Hz、16 位 PCM。输入分别是 2000 和 1000 个样本，混音是 1000 个样本且不全为零；每个混音样本与相同位置两个输入样本之和的一半相差最多 1 个整数单位。`silent.wav` 有 2000 个全零样本；`original.wav` 的 2000 个样本与 `a.wav` 完全相同。
+
+```sh
+ffmpeg -v error -i a.wav -filter_complex '[0:a]volume=1[out]' -map '[missing]' -c:a pcm_s16le missing.wav
+ffmpeg -v error -i a.wav -filter_complex '[0:a]asplit=2[out][unused]' -map '[out]' -c:a pcm_s16le unconnected.wav
+ffmpeg -v error -i a.wav -filter_complex '[0:a]volume=0.5[out]' -map '[out]' -c:a copy copy.wav
+ffmpeg -v error -i a.wav -filter_complex '[0:a]volume=1[out]' -map '[out]' first.wav -map '[out]' second.wav
+```
+
+这四条都应失败且产生诊断；记录退出状态，不假定错误时是否创建文件。不要只凭文件存在判断成功。
+
+```sh
+ffmpeg -v error -i a.wav -filter_complex '[0:a]volume=0' -c:a pcm_s16le auto-filter.mkv
+ffmpeg -v error -i a.wav -filter_complex '[0:a]volume=0' -map 0:a -c:a pcm_s16le mapped-filter.mkv
+```
+
+检查 `auto-filter.mkv` 只有一条静音音轨；`mapped-filter.mkv` 有两条音轨，按顺序分别为静音和与 `a.wav` 相同的原始样本。以上行为在本机上游工具观察；只有对生成的目标程序运行同样检查才能算重建验收。
