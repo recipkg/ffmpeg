@@ -10,7 +10,7 @@
 
 ## 可复现样本
 
-测试使用四帧 4×4 RGB24 rawvideo，帧率 4 fps。每帧填入不同且固定的像素值，因此可通过输出字节确认源帧序号。命令和样本生成逻辑位于 standard-library-verification/tests/test_recipes.py 的 FFmpegSamples 类；该类 10 个测试方法在记录时全部通过。
+测试使用四帧 4×4 RGB24 rawvideo，帧率 4 fps。每帧填入不同且固定的像素值，因此可通过输出字节确认源帧序号。命令和样本生成逻辑位于 standard-library-verification/tests/test_recipes.py 的 FFmpegSamples 类；该类 11 个测试方法在记录时全部通过。
 
 在源时间戳从零开始的前提下，观察结果如下：
 
@@ -26,6 +26,12 @@
 | 输出前 `-t 0.25 -to 0.75` | 0 |
 
 这些样例核对了输入与输出选项的简单位置差异、seek 窗口、时长、结束位置，以及同时指定 -t 和 -to 时由 -t 优先的结果。它们是 rawvideo 的零起始样本，不能代表长 GOP 文件上的 seek 读取成本或关键帧边界。
+
+## 单 GOP 输入 seek 对照
+
+为区分快速 rawvideo seek 与真正的关键帧 seek，再生成 8 帧 16×16 RGB24，帧率 4 fps，第 i 帧像素 (x,y) 为 (4×i, 5×x, 5×y)。使用 MPEG-2 编码，最大 GOP 长度 8、关闭 B 帧、将 scene-change 阈值设高。`ffprobe` 确认关键帧标志为 `[1,0,0,0,0,0,0,0]`，因此 0.5 秒目标落在第 0 帧关键帧之后、下一关键帧之前。
+
+先将完整压缩样本解码为 RGB24 基线；随后从输入位置 `-ss 0.5` 分别以默认 accurate seek 转码、以 `-noaccurate_seek` 转码、以及 streamcopy。再次解码后逐字节比较：默认准确转码仅保留基线帧 2–7；禁用 accurate seek 的转码和输入 streamcopy 都保留全部 8 帧，包括 seek point 到目标之间的前两帧。这些结果复核了本机 FFmpeg n9.0.2 的输入 seek 行为。它们不说明输出 seek 的 streamcopy 行为，也未测量 seek 性能。
 
 ## 上游规则与本样本的边界
 

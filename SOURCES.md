@@ -22,4 +22,4 @@
 
 提取记录中的源码阅读覆盖根 README、许可证说明、命令行文档开头及流选择、`ffprobe` 和 `ffplay` 的部分选项；具体本机样本、环境、复核日期和缺口见 `COVERAGE.md` 及其链接的专项说明。本轮通过官方发布页、固定 Git tag 元数据和官方仓库页面复核版本与来源；没有下载或克隆完整上游源码，也没有把本轮来源核验写成独立重建或完整 CLI 验收。
 
-- `-ss`、`-t`、`-to` 的输入/输出选项范围、准确 seek、转码与 streamcopy 差异以及互斥优先级，依据固定源码提交的 [doc/ffmpeg.texi](https://github.com/FFmpeg/FFmpeg/blob/946fcce07b6dcd0331c8cc609192aeff5e1924f8/doc/ffmpeg.texi)；规则以本机 FFmpeg n9.0.2 的短 rawvideo 样本复核。命令、逐帧结果和边界见 [SEEK-DURATION-OBSERVED.md](SEEK-DURATION-OBSERVED.md)。
+- `-ss`、`-t`、`-to` 的输入/输出选项范围、准确 seek、转码与 streamcopy 差异以及互斥优先级，依据固定源码提交的 [doc/ffmpeg.texi](https://github.com/FFmpeg/FFmpeg/blob/946fcce07b6dcd0331c8cc609192aeff5e1924f8/doc/ffmpeg.texi)；规则以本机 FFmpeg n9.0.2 的短 rawvideo 与单 GOP 样本复核。命令、逐帧结果和边界见 [SEEK-DURATION-OBSERVED.md](SEEK-DURATION-OBSERVED.md)。

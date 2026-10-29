@@ -5,7 +5,7 @@ format = "recipkg/1"
 
 [package]
 name = "ffmpeg"
-version = "0.1.9"
+version = "0.1.10"
 kind = "software"
 description = "FFmpeg 9.0.2 多媒体工具和组件的重建配方；当前覆盖不完整。"
 entry = "BUILD_PROMPT.md"

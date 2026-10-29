@@ -108,6 +108,32 @@ ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rg
 ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -t 0.25 -to 0.75 -c:v rawvideo -pix_fmt rgb24 -f rawvideo priority.rgb
 ```
 
-输入与输出 -ss 0.5 均输出源帧 2、3；输入与输出 -t 0.5 均输出帧 0、1；输入与输出 -to 0.75 均输出帧 0、1、2；两个 seek-window 命令均输出帧 2、3；同时给出 -t 0.25 -to 0.75 时只输出帧 0。对每个输出文件按上面的帧字节逐帧比较。对应自动化用例位于 standard-library-verification/tests/test_recipes.py 的 FFmpegSamples.test_input_output_seek_and_time_bounds；固定上游 n9.0.2 本机运行 10 个 FFmpegSamples 测试方法通过。
+输入与输出 -ss 0.5 均输出源帧 2、3；输入与输出 -t 0.5 均输出帧 0、1；输入与输出 -to 0.75 均输出帧 0、1、2；两个 seek-window 命令均输出帧 2、3；同时给出 -t 0.25 -to 0.75 时只输出帧 0。对每个输出文件按上面的帧字节逐帧比较。对应自动化用例位于 standard-library-verification/tests/test_recipes.py 的 FFmpegSamples.test_input_output_seek_and_time_bounds；固定上游 n9.0.2 本机运行 11 个 FFmpegSamples 测试方法通过。
 
-样本时间戳从零开始且均为 rawvideo，不能验证长 GOP 编码、非零起始时间戳、关键帧边界、streamcopy accurate-seek 差异、实时/不可 seek 来源或其他格式。这些结果只复核上游行为，不代表独立重建已通过。
+
+### 输入 seek 与 GOP 关键帧
+
+在同一隔离目录另生成 8 帧 16×16 RGB24、4 fps 样本；第 i 帧像素 (x,y) 为 (4×i, 5×x, 5×y)。编码成 GOP 长度为 8 的 MPEG-2，关闭 B 帧并禁用样本触发的额外关键帧。先确认只有第 0 帧是关键帧：
+
+```python
+from pathlib import Path
+frames = [bytes(v for y in range(16) for x in range(16)
+                for v in (i * 4, x * 5, y * 5)) for i in range(8)]
+Path('gop-source.rgb').write_bytes(b''.join(frames))
+```
+
+```sh
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 16x16 -framerate 4 -i gop-source.rgb -an -c:v mpeg2video -g 8 -bf 0 -sc_threshold 1000000000 -q:v 2 -pix_fmt yuv420p gop.mkv
+ffprobe -v error -select_streams v:0 -show_entries frame=key_frame -show_frames -of json gop.mkv
+ffmpeg -i gop.mkv -an -fps_mode passthrough -c:v rawvideo -pix_fmt rgb24 -f rawvideo baseline.rgb
+ffmpeg -ss 0.5 -i gop.mkv -an -fps_mode passthrough -c:v ffv1 accurate.mkv
+ffmpeg -noaccurate_seek -ss 0.5 -i gop.mkv -an -fps_mode passthrough -c:v ffv1 noaccurate.mkv
+ffmpeg -ss 0.5 -i gop.mkv -an -c:v copy stream-copy.mkv
+ffmpeg -i accurate.mkv -an -fps_mode passthrough -c:v rawvideo -pix_fmt rgb24 -f rawvideo accurate.rgb
+ffmpeg -i noaccurate.mkv -an -fps_mode passthrough -c:v rawvideo -pix_fmt rgb24 -f rawvideo noaccurate.rgb
+ffmpeg -i stream-copy.mkv -an -fps_mode passthrough -c:v rawvideo -pix_fmt rgb24 -f rawvideo stream-copy.rgb
+```
+
+检查关键帧标志为 [1,0,0,0,0,0,0,0]。以每帧 16×16×3 字节切分 baseline.rgb：accurate.rgb 必须逐字节等于第 2–7 帧；noaccurate.rgb 与 stream-copy.rgb 必须逐字节等于完整 8 帧。此对照只覆盖本样本的输入 seek；不外推到非零起始时间戳、长 GOP 不同封装、B 帧、输出 streamcopy 或实时输入。
+
+前述四帧 rawvideo 样本时间戳从零开始；GOP 小节只验证了一个 MPEG-2 单 GOP 输入样本。非零起始时间戳、B 帧、其他 codec/容器、输出 seek 的 streamcopy、实时/不可 seek 来源及跨平台行为仍未覆盖。所有结果只复核本机上游行为，不代表独立重建已通过。

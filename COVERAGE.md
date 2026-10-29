@@ -22,5 +22,6 @@
 ## 时间定位与截取迭代
 
 - 从固定上游手册提取输入/输出 `-ss`、`-t`、`-to` 的位置语义、默认 accurate seek 对转码与 streamcopy 的区别，以及 `-t` 和 `-to` 并用时的优先级。专门说明选项作用于下一个输入或输出文件。
-- 在本机上游 FFmpeg/ffprobe n9.0.2 上用 4 帧、4 fps、4×4 RGB24 rawvideo 对照输入/输出 seek、输入/输出 duration、end position、seek window 和 `-t` 优先级；10 个 `FFmpegSamples` 测试方法全部通过，其中新增时间用例逐字节核对帧内容。
-- 这是固定上游程序的观察，不是独立重建验收。关键帧间隔、非零起始时间戳、streamcopy accurate-seek 差异、不可 seek/live 输入、其他容器和平台均未覆盖。
+- 在本机上游 FFmpeg/ffprobe n9.0.2 上用 4 帧、4 fps、4×4 RGB24 rawvideo 对照输入/输出 seek、输入/输出 duration、end position、seek window 和 `-t` 优先级；11 个 `FFmpegSamples` 测试方法全部通过，其中新增时间用例逐字节核对帧内容。
+- 增加 8 帧 MPEG-2 单 GOP 样本：`ffprobe` 确认只有第 0 帧为关键帧。输入 `-ss 0.5` 默认转码解码结果逐字节等于完整解码基线的第 2–7 帧；`-noaccurate_seek` 转码和输入 streamcopy 均等于全部 8 帧基线。测试同时验证编码关键帧布局，避免把 rawvideo 的快速精确 seek 误当成 GOP 行为。
+- 这是固定上游程序的观察，不是独立重建验收。非零起始时间戳、复杂 GOP、多种容器、不可 seek/live 输入和平台差异仍未覆盖。
