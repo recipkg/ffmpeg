@@ -81,3 +81,33 @@ ffmpeg -v error -i a.wav -filter_complex '[0:a]volume=0' -map 0:a -c:a pcm_s16le
 ```
 
 检查 `auto-filter.mkv` 只有一条静音音轨；`mapped-filter.mkv` 有两条音轨，按顺序分别为静音和与 `a.wav` 相同的原始样本。以上行为在本机上游工具观察；只有对生成的目标程序运行同样检查才能算重建验收。
+
+
+## 时间定位与截取
+
+在空的临时目录生成四帧 4×4 RGB24 原始视频，帧率 4 fps。帧 i 的像素 (x,y) 为 (40×i, 50×x, 50×y)，均为 0–255 的 RGB 分量：
+
+```python
+from pathlib import Path
+frames = [bytes(v for y in range(4) for x in range(4)
+                for v in (i * 40, x * 50, y * 50)) for i in range(4)]
+Path('source.rgb').write_bytes(b''.join(frames))
+```
+
+把选项分别放在输入 -i 之前和输出文件名前，逐字节检查以下结果：
+
+```sh
+ffmpeg -ss 0.5 -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -c:v rawvideo -pix_fmt rgb24 -f rawvideo input-seek.rgb
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -ss 0.5 -c:v rawvideo -pix_fmt rgb24 -f rawvideo output-seek.rgb
+ffmpeg -t 0.5 -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -c:v rawvideo -pix_fmt rgb24 -f rawvideo input-duration.rgb
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -t 0.5 -c:v rawvideo -pix_fmt rgb24 -f rawvideo output-duration.rgb
+ffmpeg -to 0.75 -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -c:v rawvideo -pix_fmt rgb24 -f rawvideo input-end-position.rgb
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -to 0.75 -c:v rawvideo -pix_fmt rgb24 -f rawvideo output-end-position.rgb
+ffmpeg -ss 0.5 -t 0.5 -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -c:v rawvideo -pix_fmt rgb24 -f rawvideo input-seek-window.rgb
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -ss 0.5 -t 0.5 -c:v rawvideo -pix_fmt rgb24 -f rawvideo output-seek-window.rgb
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 4x4 -framerate 4 -i source.rgb -t 0.25 -to 0.75 -c:v rawvideo -pix_fmt rgb24 -f rawvideo priority.rgb
+```
+
+输入与输出 -ss 0.5 均输出源帧 2、3；输入与输出 -t 0.5 均输出帧 0、1；输入与输出 -to 0.75 均输出帧 0、1、2；两个 seek-window 命令均输出帧 2、3；同时给出 -t 0.25 -to 0.75 时只输出帧 0。对每个输出文件按上面的帧字节逐帧比较。对应自动化用例位于 standard-library-verification/tests/test_recipes.py 的 FFmpegSamples.test_input_output_seek_and_time_bounds；固定上游 n9.0.2 本机运行 10 个 FFmpegSamples 测试方法通过。
+
+样本时间戳从零开始且均为 rawvideo，不能验证长 GOP 编码、非零起始时间戳、关键帧边界、streamcopy accurate-seek 差异、实时/不可 seek 来源或其他格式。这些结果只复核上游行为，不代表独立重建已通过。

@@ -2,7 +2,7 @@
 
 **多媒体处理工具和组件：提炼音视频转换、流选择、过滤图及相关接口。**
 
-[标准库](https://github.com/recipkg/standard-library) · [配方清单](RECIPE.md) · [来源记录](SOURCES.md) · [构建要求](BUILD_PROMPT.md) · [验收条件](ACCEPTANCE.md) · [覆盖状态](COVERAGE.md)
+[标准库](https://github.com/recipkg/standard-library) · [配方清单](RECIPE.md) · [来源记录](SOURCES.md) · [构建要求](BUILD_PROMPT.md) · [验收条件](ACCEPTANCE.md) · [覆盖状态](COVERAGE.md) · [时间定位与截取](SEEK-DURATION-OBSERVED.md)
 
 ![从软件与依赖整理配方，再交给 Agent 重建](https://raw.githubusercontent.com/recipkg/recipkg/main/assets/recipkg-cover.png)
 

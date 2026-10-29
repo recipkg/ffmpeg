@@ -17,3 +17,10 @@
 - `ffprobe` JSON：本机 n9.0.2 对双音轨合成 Matroska 验证字段类型、标签、默认标记、流筛选、空字段选择和不存在文件的错误 section；命令和边界见 `PROBE-AND-PLAY.md`。只证明所列上游构建与样本，其他格式、writer、协议、计数、实时性及重建尚未验收。
 
 - 2026-10-29 自动样本复核：在 Omarchy Linux x86_64、Python 3.14.8 上执行 `python3 -m unittest discover -s tests -p test_recipes.py -k FFmpegSamples -v`；默认目标为 `/usr/bin/ffmpeg` 和 `/usr/bin/ffprobe`，两者均报告 n9.0.2。9 项通过：自动音轨选择与 stream copy、复杂音频混合/分支与映射错误、多输入/负向/可选流映射、ffprobe JSON 字段/筛选/错误、未标记过滤输出、RGB24 裁剪与邻近缩放、帧率升降选帧、FFV1 解码像素及时间戳。测试用例各自在临时目录生成素材。此结果是固定版本上游工具的复核，不是配方重建或其他发行构建的验收。
+
+
+## 时间定位与截取迭代
+
+- 从固定上游手册提取输入/输出 `-ss`、`-t`、`-to` 的位置语义、默认 accurate seek 对转码与 streamcopy 的区别，以及 `-t` 和 `-to` 并用时的优先级。专门说明选项作用于下一个输入或输出文件。
+- 在本机上游 FFmpeg/ffprobe n9.0.2 上用 4 帧、4 fps、4×4 RGB24 rawvideo 对照输入/输出 seek、输入/输出 duration、end position、seek window 和 `-t` 优先级；10 个 `FFmpegSamples` 测试方法全部通过，其中新增时间用例逐字节核对帧内容。
+- 这是固定上游程序的观察，不是独立重建验收。关键帧间隔、非零起始时间戳、streamcopy accurate-seek 差异、不可 seek/live 输入、其他容器和平台均未覆盖。
