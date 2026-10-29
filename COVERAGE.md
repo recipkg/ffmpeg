@@ -15,3 +15,5 @@
 - 视频样本：本机 n9.0.2 使用独立生成的 4×4 RGB24 像素，验证裁剪、邻近放大、两种无效裁剪、帧率升降及 FFV1/Matroska 转码，逐帧比对像素并检查两个时间戳。详见 `VIDEO-FILTERS-OBSERVED.md`；其他像素格式、视频滤镜、编码器、性能、硬件及重建未验证。
 
 - `ffprobe` JSON：本机 n9.0.2 对双音轨合成 Matroska 验证字段类型、标签、默认标记、流筛选、空字段选择和不存在文件的错误 section；命令和边界见 `PROBE-AND-PLAY.md`。只证明所列上游构建与样本，其他格式、writer、协议、计数、实时性及重建尚未验收。
+
+- 2026-10-29 自动样本复核：在 Omarchy Linux x86_64、Python 3.14.8 上执行 `python3 -m unittest discover -s tests -p test_recipes.py -k FFmpegSamples -v`；默认目标为 `/usr/bin/ffmpeg` 和 `/usr/bin/ffprobe`，两者均报告 n9.0.2。9 项通过：自动音轨选择与 stream copy、复杂音频混合/分支与映射错误、多输入/负向/可选流映射、ffprobe JSON 字段/筛选/错误、未标记过滤输出、RGB24 裁剪与邻近缩放、帧率升降选帧、FFV1 解码像素及时间戳。测试用例各自在临时目录生成素材。此结果是固定版本上游工具的复核，不是配方重建或其他发行构建的验收。
